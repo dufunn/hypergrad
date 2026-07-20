@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused improvement to the recruiting workflow.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What recruiting decision or workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful product behavior, not only the interface.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and external services
+      description: Note any personal data, scraping, credentials, paid APIs, or third-party terms involved.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This can work without exposing company, role, schedule, or applicant identity to friends.
+        - label: This does not require bulk scraping recruitment websites.

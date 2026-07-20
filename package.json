@@ -1,0 +1,22 @@
+{
+  "name": "hypergrad",
+  "version": "1.0.0",
+  "description": "A privacy-first campus recruiting workflow dashboard.",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://hypergrad-campus-hiring-dashboard.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dufunn/hypergrad.git"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test:job-import": "node scripts/test-job-import.mjs",
+    "test:boundaries": "node scripts/test-boundaries.mjs",
+    "check": "node scripts/test-job-import.mjs && node scripts/test-boundaries.mjs && node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

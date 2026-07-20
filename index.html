@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>HyperGrad · Campus Recruiting Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Pixelify+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./styles.css?v=26">
+  <link rel="stylesheet" href="./workspace.css?v=44">
+  <script defer src="./amap-config.local.js"></script>
+  <script defer src="./supabase-config.local.js"></script>
+  <script defer src="./runtime-config.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script defer src="./assets/china-boundary-data.js?v=23"></script>
+  <script defer src="./assets/china-provinces-data.js?v=23"></script>
+  <script defer src="./app.js?v=43"></script>
+</head>
+<body>
+  <main class="app-shell" id="campus-dashboard">
+    <section class="entry-screen" id="entry-screen" aria-labelledby="entry-title">
+      <video class="entry-video" autoplay muted loop playsinline preload="auto" disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback" poster="./assets/hypergrad-desert-poster.jpg" aria-hidden="true">
+        <source src="./assets/hypergrad-desert-hero-1080.mp4" type="video/mp4" media="(min-width: 1100px)">
+        <source src="./assets/hypergrad-desert-hero-720.mp4" type="video/mp4">
+      </video>
+      <script>
+        (() => {
+          const video = document.currentScript.previousElementSibling;
+          if (!(video instanceof HTMLVideoElement)) return;
+
+          const start = () => {
+            if (document.hidden) return;
+            video.muted = true;
+            video.defaultMuted = true;
+            video.volume = 0;
+            video.controls = false;
+            const playback = video.play();
+            if (playback?.catch) playback.catch(() => {});
+          };
+
+          video.muted = true;
+          video.defaultMuted = true;
+          video.volume = 0;
+          video.playsInline = true;
+          video.controls = false;
+          video.setAttribute("muted", "");
+          video.setAttribute("playsinline", "");
+          video.setAttribute("webkit-playsinline", "");
+          ["loadedmetadata", "loadeddata", "canplay", "canplaythrough"].forEach((eventName) => {
+            video.addEventListener(eventName, start, { passive: true });
+          });
+          document.addEventListener("visibilitychange", start, { passive: true });
+          window.addEventListener("pageshow", start, { passive: true });
+          start();
+        })();
+      </script>
+      <div class="entry-shade" aria-hidden="true"></div>
+
+      <nav class="entry-nav" aria-label="Homepage navigation">
+        <a class="entry-brand" href="#entry-title" aria-label="HyperGrad home">
+          <span class="entry-brand-mark">HG</span>
+          <span>HyperGrad</span>
+        </a>
+        <div class="entry-nav-links">
+          <a href="#entry-capabilities">Product</a>
+          <a href="#entry-capabilities">Workflow</a>
+          <a href="#entry-capabilities">Map research</a>
+        </div>
+        <button class="entry-sign-in" type="button" id="entry-auth-open">Sign in</button>
+      </nav>
+
+      <div class="entry-content">
+        <p class="entry-kicker"><span>New</span> A calmer way to run campus recruiting</p>
+        <h1 id="entry-title">Campus recruiting.<br>Without the chaos.</h1>
+        <p class="entry-copy">Track applications, deadlines, interview links and locations in one focused workspace, from first save to final offer.</p>
+
+        <div class="entry-access" id="entry-access">
+          <div class="auth-session" id="auth-session" hidden>
+            <span><i aria-hidden="true"></i> CLOUD WORKSPACE</span>
+            <strong id="auth-session-email"></strong>
+          </div>
+
+          <div class="auth-tabs" id="auth-tabs" role="tablist" aria-label="Account access" hidden>
+            <button type="button" role="tab" id="auth-login-tab" aria-controls="auth-form" aria-selected="true" data-auth-mode="login">Sign in</button>
+            <button type="button" role="tab" id="auth-register-tab" aria-controls="auth-form" aria-selected="false" data-auth-mode="register">Create account</button>
+          </div>
+
+          <form class="auth-form" id="auth-form" novalidate hidden>
+            <div class="auth-field auth-name-field" id="auth-name-field" hidden>
+              <label for="auth-name">Display name</label>
+              <input id="auth-name" name="name" type="text" autocomplete="name" maxlength="40" placeholder="How should we address you?">
+            </div>
+            <div class="auth-field auth-invite-field" id="auth-invite-field" hidden>
+              <label for="auth-invite">Invite code</label>
+              <input id="auth-invite" name="invite" type="text" autocomplete="off" maxlength="24" placeholder="Enter your access code">
+            </div>
+            <div class="auth-field" id="auth-email-field">
+              <label for="auth-email">Email</label>
+              <input id="auth-email" name="email" type="email" autocomplete="email" required placeholder="name@example.com">
+            </div>
+            <div class="auth-field">
+              <label for="auth-password">Password</label>
+              <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="At least 8 characters">
+            </div>
+            <div class="auth-field auth-confirm-field" id="auth-confirm-field" hidden>
+              <label for="auth-password-confirm">Confirm password</label>
+              <input id="auth-password-confirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="8" placeholder="Enter it again">
+            </div>
+            <div class="auth-form-actions">
+              <button class="auth-submit" id="auth-submit" type="submit">Sign in and continue</button>
+              <button class="auth-reset" id="auth-reset" type="button">Forgot password?</button>
+            </div>
+          </form>
+
+          <div class="entry-cta-group">
+            <button class="entry-button" type="button" id="enter-dashboard">
+              <span>Start organizing</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+            <button class="entry-demo-button" type="button" id="enter-demo">
+              <span>Explore demo</span>
+              <span aria-hidden="true">◎</span>
+            </button>
+          </div>
+          <button class="auth-panel-close" type="button" id="auth-panel-close" hidden>Close</button>
+          <p class="auth-status" id="auth-status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="entry-capabilities" id="entry-capabilities" aria-label="Core product capabilities">
+        <span>Application pipeline</span>
+        <span>Deadlines &amp; interviews</span>
+        <span>Location research</span>
+      </div>
+    </section>
+
+    <div class="product-shell" id="product-shell">
+      <aside class="product-sidebar" aria-label="主导航">
+        <button class="sidebar-brand" type="button" data-app-view="overview" aria-label="返回校招概览">HG</button>
+
+        <nav class="sidebar-nav" id="sidebar-nav" aria-label="工作台页面">
+          <button class="sidebar-item is-active" type="button" data-app-view="overview" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z"/></svg>
+            <span>概览</span>
+          </button>
+          <button class="sidebar-item" type="button" data-app-view="applications">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h10M7 9h10M7 13h7M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/></svg>
+            <span>岗位</span>
+          </button>
+          <button class="sidebar-item" type="button" data-app-view="research">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2V6Zm5-2v14m6-12v14"/></svg>
+            <span>地图</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-spacer" aria-hidden="true"></div>
+
+        <div class="sidebar-utilities">
+          <button class="sidebar-item" type="button" data-app-action="friends">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2m6.5-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7.5 1a3 3 0 0 1 3 3v2m-2-11a3 3 0 0 1 0 6"/></svg>
+            <span>朋友</span>
+          </button>
+          <button class="sidebar-profile" id="sidebar-profile" type="button" aria-label="账户状态" disabled>
+            <span class="sidebar-profile-avatar" aria-hidden="true">D</span>
+            <span id="sidebar-account-label">账户</span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="product-main">
+        <section class="app-view overview-view" id="overview-view" data-view="overview" aria-labelledby="overview-title">
+          <header class="workspace-page-header">
+            <div>
+              <p class="workspace-kicker" id="overview-date">CAMPUS RECRUITING WORKSPACE</p>
+              <h2 id="overview-title">校招概览</h2>
+              <p>岗位进度、确定日程和机会分布，都在今天的工作区里。</p>
+            </div>
+            <div class="workspace-header-actions">
+              <button class="demo-data-chip" type="button" id="demo-data-clear" hidden>
+                <span>DEMO</span>
+                清空示例数据
+              </button>
+              <button class="workspace-icon-button" type="button" id="overview-calendar-button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg>
+                日程
+              </button>
+              <button class="workspace-primary-button" type="button" id="overview-add-button">＋ 新增岗位</button>
+            </div>
+          </header>
+
+          <div class="overview-grid">
+            <article class="workspace-card pipeline-overview-card">
+              <header class="workspace-card-heading">
+                <div>
+                  <p class="workspace-eyebrow">APPLICATION PIPELINE</p>
+                  <h3>投递进度</h3>
+                </div>
+                <strong id="overview-pipeline-total">0 个岗位</strong>
+              </header>
+              <div class="overview-pipeline" id="overview-pipeline"></div>
+              <div class="overview-recent" id="overview-recent"></div>
+            </article>
+
+            <article class="workspace-card role-signals-card">
+              <header class="workspace-card-heading">
+                <div>
+                  <p class="workspace-eyebrow">ROLE SIGNALS</p>
+                  <h3>岗位方向表现</h3>
+                </div>
+                <div class="role-signal-summary">
+                  <div class="role-signal-metric">
+                    <strong id="overview-role-rate">0%</strong>
+                    <span>整体进面率</span>
+                    <span class="role-speed" id="overview-role-speed">样本积累中</span>
+                  </div>
+                  <button class="role-plan-trigger" type="button" id="career-directions-open">
+                    <span>计划方向</span>
+                    <strong>点击选择</strong>
+                  </button>
+                </div>
+              </header>
+              <div class="overview-role-chart" id="overview-role-chart" role="group" aria-label="各岗位方向投递与进面数量"></div>
+            </article>
+
+            <article class="workspace-card geography-card">
+              <header class="workspace-card-heading map-card-heading">
+                <div class="map-title-chip">
+                  <p class="workspace-eyebrow">OPPORTUNITY MAP</p>
+                  <h3>岗位地理分布</h3>
+                </div>
+                <button class="map-research-button" type="button" id="overview-research-button" aria-label="打开地图 Research" title="打开地图 Research">↗</button>
+              </header>
+              <div class="overview-map" id="overview-map" role="application" aria-label="岗位总体地理分布地图"></div>
+              <div class="overview-map-summary" id="overview-map-summary"></div>
+            </article>
+
+            <article class="workspace-card agenda-overview-card">
+              <header class="workspace-card-heading">
+                <div>
+                  <p class="workspace-eyebrow">UPCOMING SCHEDULE</p>
+                  <h3>近期日程</h3>
+                </div>
+                <span id="overview-overdue">没有逾期</span>
+              </header>
+              <div class="overview-agenda" id="overview-agenda"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="app-view applications-view" id="applications-view" data-view="applications" aria-labelledby="applications-title" hidden>
+          <header class="workspace-page-header">
+            <div>
+              <p class="workspace-kicker">OPPORTUNITY LIBRARY</p>
+              <h2 id="applications-title">岗位管理</h2>
+              <p>集中搜索、筛选和更新所有校招机会。</p>
+            </div>
+            <button class="workspace-primary-button" type="button" id="applications-add-button">＋ 新增岗位</button>
+          </header>
+          <div class="applications-toolbar">
+            <label class="applications-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <span class="visually-hidden">搜索岗位</span>
+              <input id="applications-query" type="search" autocomplete="off" placeholder="搜索公司、岗位、城市或办公地点">
+            </label>
+            <label class="applications-filter">进度
+              <select id="applications-stage-filter">
+                <option value="all">全部进度</option>
+                <option value="pending">待投递</option>
+                <option value="applied">已投递</option>
+                <option value="test">测评 / 笔试</option>
+                <option value="interview">面试中</option>
+                <option value="offer">Offer</option>
+                <option value="ended">已结束</option>
+              </select>
+            </label>
+            <div class="applications-scope" id="applications-scope" hidden>
+              <span id="applications-scope-label"></span>
+              <button type="button" id="applications-scope-clear" aria-label="清除漏斗范围筛选">×</button>
+            </div>
+          </div>
+          <section class="applications-card" aria-live="polite">
+            <header class="applications-card-heading">
+              <span>公司与岗位</span><span>进度</span><span>Base</span><span>下一日程</span><span>操作</span>
+            </header>
+            <div class="applications-list" id="applications-list"></div>
+          </section>
+        </section>
+
+        <section class="app-view research-view" id="research-view" data-view="research" aria-labelledby="map-heading" hidden>
+    <h2 class="visually-hidden" id="map-heading">岗位地理态势</h2>
+    <span class="visually-hidden" id="map-count">正在加载平面地图</span>
+
+    <header class="toolbar" id="dashboard-toolbar" aria-label="看板筛选与操作">
+      <div class="filter-group" id="map-filter-group">
+        <div class="field compact-field"><span class="field-label" id="stage-filter-label">进度</span>
+          <select id="stage-filter">
+            <option value="all">全部进度</option>
+            <option value="pending">待投递</option>
+            <option value="applied">已投递</option>
+            <option value="test">测评 / 笔试</option>
+            <option value="interview">面试中</option>
+            <option value="offer">Offer</option>
+            <option value="ended">已结束</option>
+          </select>
+        </div>
+        <div class="field compact-field"><span class="field-label" id="city-filter-label">城市</span>
+          <select id="city-filter">
+            <option value="all">全部城市</option>
+          </select>
+        </div>
+        <div class="field compact-field"><span class="field-label" id="location-filter-label">偏好</span>
+          <select id="location-filter">
+            <option value="all">全部偏好</option>
+            <option value="love">很想去</option>
+            <option value="okay">可接受</option>
+            <option value="unsure">不确定</option>
+          </select>
+        </div>
+        <div class="field compact-field friend-filter-field" id="friend-filter-field" hidden><span class="field-label" id="friend-filter-label">朋友</span>
+          <select id="friend-filter">
+            <option value="all">全部朋友</option>
+            <option value="none">隐藏朋友</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <div class="map-mode-indicator" aria-live="polite">
+          <span class="system-pulse" aria-hidden="true"></span>
+          <strong id="map-mode-label">平面地图</strong>
+          <small id="map-zoom-label">CHINA</small>
+        </div>
+        <button class="map-action" type="button" id="fit-all-button">全部岗位</button>
+        <button class="button button-quiet" type="button" id="import-button">导入</button>
+        <button class="button button-quiet" type="button" id="export-button">备份</button>
+        <div class="account-chip" id="account-chip" data-state="local">
+          <span class="account-state-dot" aria-hidden="true"></span>
+          <span id="account-label">本地模式</span>
+          <button type="button" id="logout-button" hidden>退出</button>
+        </div>
+        <button class="button friends-toolbar-button" type="button" id="friends-button">朋友 <span id="friends-count">0</span></button>
+        <button class="button button-primary" type="button" id="add-button">＋ 新增岗位</button>
+        <input class="visually-hidden" type="file" id="import-file" accept="application/json,.json">
+      </div>
+    </header>
+
+    <section class="mission-stage">
+      <aside class="mission-sidebar mission-left jobs-collapsed" id="mission-left" aria-label="岗位与路线详情">
+        <section class="list-panel" id="jobs-panel" aria-labelledby="list-heading">
+          <div class="section-heading hud-heading">
+            <div>
+              <p class="eyebrow">OPPORTUNITY FEED</p>
+              <h2 id="list-heading">岗位与 Base</h2>
+            </div>
+            <div class="panel-heading-actions">
+              <span id="list-count">0 条记录</span>
+              <button class="panel-rollup" type="button" id="jobs-panel-toggle" aria-controls="record-list" aria-expanded="false" aria-label="展开岗位列表">
+                <span>展开</span><i aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div class="record-list" id="record-list" hidden></div>
+        </section>
+
+        <section class="route-panel" id="route-panel" aria-labelledby="route-title" hidden>
+          <header class="route-panel-heading">
+            <div>
+              <p class="eyebrow" id="route-eyebrow">TRANSIT ROUTE</p>
+              <h2 id="route-title">公共交通行程</h2>
+            </div>
+            <div class="route-heading-actions">
+              <button class="panel-rollup" type="button" id="route-panel-toggle" aria-controls="route-panel-body" aria-expanded="true" aria-label="收起行程详情">
+                <span>收起</span><i aria-hidden="true"></i>
+              </button>
+              <button class="route-close" type="button" id="route-close" aria-label="关闭行程查询">关闭</button>
+            </div>
+          </header>
+
+          <div class="route-panel-body" id="route-panel-body">
+            <div class="route-mode-switch" id="route-mode-switch" role="group" aria-label="出行方式">
+              <button type="button" data-route-mode="transit" aria-pressed="true">
+                <span aria-hidden="true">轨</span>
+                <strong>公共交通</strong>
+              </button>
+              <button type="button" data-route-mode="driving" aria-pressed="false">
+                <span aria-hidden="true">驾</span>
+                <strong>自驾</strong>
+              </button>
+            </div>
+            <div class="route-endpoints" aria-label="行程起点与终点">
+              <button class="route-endpoint" type="button" id="route-origin" data-route-endpoint="origin">
+                <span>起点</span><strong>选择起点</strong><small>我的岗位、朋友点位或任意地点</small>
+              </button>
+              <button class="route-swap" type="button" id="route-swap">交换</button>
+              <button class="route-endpoint" type="button" id="route-destination" data-route-endpoint="destination">
+                <span>终点</span><strong>选择终点</strong><small>搜索写字楼、地铁站或地点</small>
+              </button>
+            </div>
+
+            <div class="route-picker" id="route-picker" hidden>
+              <label for="route-place-query">选择<span id="route-picker-target-label">终点</span></label>
+              <div class="route-picker-search">
+                <input id="route-place-query" type="search" autocomplete="off" placeholder="搜索地点，或从下方点位中选择">
+                <button class="button button-primary" type="button" id="route-place-search">搜索</button>
+              </div>
+              <div class="route-picker-results" id="route-picker-results" role="listbox" aria-label="可用行程地点"></div>
+            </div>
+
+            <div class="route-actions">
+              <p class="route-status" id="route-status" aria-live="polite">先选择起点和终点。</p>
+              <button class="button button-primary route-submit" type="button" id="route-submit" disabled>查看公共交通</button>
+            </div>
+            <div class="route-results" id="route-results" aria-live="polite"></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="map-panel globe-panel" aria-labelledby="map-heading">
+        <div class="map-frame globe-frame">
+          <div id="job-map" class="map-canvas" role="application" aria-label="可缩放的岗位平面地图与街道地图"></div>
+          <div class="map-loading" id="map-loading">正在建立平面地图…</div>
+          <article class="selection-card" id="selection-card" aria-live="polite"></article>
+        </div>
+      </section>
+
+      <aside class="mission-sidebar mission-right">
+        <section class="insights" aria-label="校招数据洞察">
+          <article class="insight-panel insight-pipeline">
+            <div class="insight-heading">
+              <div>
+                <p class="eyebrow">PIPELINE</p>
+                <h2>当前筛选 · 进度分布</h2>
+              </div>
+              <strong id="pipeline-total">0</strong>
+            </div>
+            <div id="stage-chart" class="stage-chart"></div>
+          </article>
+
+          <article class="insight-panel insight-cities">
+            <div class="insight-heading">
+              <div>
+                <p class="eyebrow">BASE SIGNAL</p>
+                <h2>城市机会与偏好</h2>
+              </div>
+              <span class="chart-legend"><i></i>很想去</span>
+            </div>
+            <div id="city-chart" class="city-chart"></div>
+          </article>
+
+        </section>
+      </aside>
+
+    </section>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="calendar-dialog" id="calendar-dialog" aria-labelledby="calendar-dialog-title">
+    <div class="calendar-shell">
+      <header class="calendar-dialog-header">
+        <div>
+          <p class="eyebrow">RECRUITMENT SCHEDULE</p>
+          <h2 id="calendar-dialog-title">校招日程</h2>
+          <p>只记录测评截止、面试时间、材料提交与 Offer 回复期限。</p>
+        </div>
+        <button class="button button-quiet calendar-minimize" type="button" id="calendar-close" aria-label="收起日程">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+          <span>收起</span>
+        </button>
+      </header>
+
+      <div class="calendar-toolbar" aria-label="切换月份">
+        <button class="calendar-nav-button" type="button" id="calendar-prev" aria-label="上个月">←</button>
+        <strong id="calendar-month-label">—</strong>
+        <button class="calendar-today-button" type="button" id="calendar-today">回到今天</button>
+        <button class="calendar-nav-button" type="button" id="calendar-next" aria-label="下个月">→</button>
+      </div>
+
+      <div class="calendar-workspace">
+        <section class="calendar-month" aria-labelledby="calendar-month-label">
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="月度校招日程"></div>
+          <div class="calendar-legend" aria-label="日程类型图例">
+            <span><i class="event-dot event-assessment"></i>测评 / 笔试</span>
+            <span><i class="event-dot event-interview"></i>面试</span>
+            <span><i class="event-dot event-deadline"></i>投递 / 材料</span>
+            <span><i class="event-dot event-offer"></i>Offer 回复</span>
+          </div>
+        </section>
+
+        <aside class="calendar-agenda" aria-labelledby="agenda-date-label">
+          <header class="agenda-heading">
+            <div>
+              <p class="eyebrow" id="agenda-kicker">OPEN AGENDA</p>
+              <h3 id="agenda-date-label">—</h3>
+            </div>
+            <div class="agenda-heading-actions">
+              <button class="button button-quiet agenda-show-all" type="button" id="agenda-show-all" hidden>全部日程</button>
+            </div>
+          </header>
+
+          <div class="agenda-list" id="agenda-list" aria-live="polite"></div>
+
+          <form class="event-form" id="event-form" hidden novalidate>
+            <input type="hidden" id="event-id" name="eventId">
+            <div class="event-form-heading">
+              <strong id="event-form-title">编辑日程</strong>
+              <button class="button button-quiet" type="button" id="event-cancel">取消</button>
+            </div>
+            <div class="event-form-grid">
+              <label class="field span-2">关联岗位
+                <select id="event-job" name="jobId" required></select>
+              </label>
+              <label class="field">日程类型
+                <select id="event-type" name="type" required>
+                  <option value="assessment">测评 / 笔试截止</option>
+                  <option value="interview">面试</option>
+                  <option value="application">投递截止</option>
+                  <option value="material">材料提交截止</option>
+                  <option value="offer">Offer 回复截止</option>
+                </select>
+              </label>
+              <label class="field">日期
+                <input id="event-date" name="date" type="date" required>
+              </label>
+              <label class="field">开始 / 截止时间
+                <input id="event-start-time" name="startTime" type="time">
+              </label>
+              <label class="field">结束时间
+                <input id="event-end-time" name="endTime" type="time">
+              </label>
+              <label class="field span-2">轮次 / 日程名称（可选）
+                <input id="event-title" name="title" placeholder="例如：产品二面；在线笔试截止">
+              </label>
+              <label class="field span-2">地点 / 会议链接
+                <input id="event-location" name="location" placeholder="测评 / 面试链接、办公楼或会议室">
+              </label>
+              <label class="field span-2">备注
+                <textarea id="event-notes" name="notes" rows="2" placeholder="HR 联系人、会议号或截止说明"></textarea>
+              </label>
+            </div>
+            <p class="form-error" id="event-form-error" aria-live="polite"></p>
+            <button class="button button-primary event-save-button" type="submit" id="event-save">保存日程</button>
+          </form>
+        </aside>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="job-dialog" id="job-dialog">
+    <form id="job-form" novalidate>
+      <header class="dialog-heading">
+        <div>
+          <h2 id="form-title">新增岗位</h2>
+          <p>一条记录对应“公司 × 岗位 × 具体 Base”</p>
+        </div>
+        <button class="button button-quiet" type="button" id="dialog-close">关闭</button>
+      </header>
+
+      <section class="job-import-card" aria-labelledby="job-import-heading">
+        <div class="job-import-heading">
+          <div>
+            <p class="eyebrow">JD CAPTURE</p>
+            <h3 id="job-import-heading">从招聘信息预填</h3>
+            <p>识别公司、岗位、Base、方向和投递截止；所有结果都会在保存前让你确认。</p>
+          </div>
+          <span class="job-import-state" id="job-import-state">等待输入</span>
+        </div>
+        <div class="job-import-url-row">
+          <label class="field" for="jd-url">招聘链接
+            <input id="jd-url" name="jdUrl" type="url" placeholder="https://careers.example.com/job/123">
+          </label>
+          <button class="button button-primary job-import-submit" type="button" id="job-import-submit">识别并预填</button>
+        </div>
+        <details class="job-import-paste" id="job-import-paste">
+          <summary>页面需要登录或无法读取？粘贴 JD 文本</summary>
+          <label class="visually-hidden" for="jd-source-text">JD 文本</label>
+          <textarea id="jd-source-text" rows="6" placeholder="粘贴职位名称、公司、工作地点、岗位职责、任职要求和投递截止日期等内容"></textarea>
+        </details>
+        <p class="job-import-status" id="job-import-status" aria-live="polite">公开招聘页可直接识别；登录页请展开并粘贴文字。</p>
+        <div class="job-import-review" id="job-import-review" hidden aria-live="polite"></div>
+        <div class="job-import-duplicate" id="job-import-duplicate" hidden></div>
+      </section>
+
+      <section class="location-picker" aria-labelledby="location-picker-heading">
+        <div class="picker-heading">
+          <div>
+            <h3 id="location-picker-heading">搜索办公地点</h3>
+            <p>支持公司、写字楼、园区、联合办公、商场和详细地址；选择后可拖动 Pin 校正。</p>
+          </div>
+          <span class="chip chip-color" id="place-provider-chip">地图搜索</span>
+        </div>
+        <div class="search-row">
+          <label class="visually-hidden" for="place-query">搜索公司或办公地点</label>
+          <input id="place-query" type="search" autocomplete="off" placeholder="例如：字节跳动 上海；环球金融中心；世纪大道100号">
+          <button class="button button-primary" type="button" id="place-search-button">搜索位置</button>
+        </div>
+        <div class="picker-grid">
+          <div class="place-results" id="place-results" role="listbox" aria-label="地点搜索结果">
+            <p class="empty-note">搜索后会显示多个候选地址</p>
+          </div>
+          <div class="picker-map-wrap">
+            <div id="picker-map" class="picker-map" role="application" aria-label="用于确认和校正办公地点的街区地图"></div>
+            <div class="picker-map-placeholder" id="picker-map-placeholder">选择候选地点后将在这里预览</div>
+          </div>
+        </div>
+        <p class="search-status" id="place-search-status" aria-live="polite"></p>
+      </section>
+
+      <div class="form-grid">
+        <label class="field">公司
+          <input id="company" name="company" required autocomplete="organization">
+        </label>
+        <label class="field">岗位
+          <input id="role" name="role" required>
+        </label>
+        <label class="field">岗位方向
+          <select id="role-direction" name="roleDirection" aria-describedby="role-direction-help">
+            <option value="">未分类</option>
+          </select>
+          <span class="field-help" id="role-direction-help">选项来自概览页设置的“计划方向”</span>
+        </label>
+        <label class="field">当前进度
+          <select id="stage" name="stage" required>
+            <option value="pending">待投递</option>
+            <option value="applied">已投递</option>
+            <option value="test">测评 / 笔试</option>
+            <option value="interview">面试中</option>
+            <option value="offer">Offer</option>
+            <option value="ended">已结束</option>
+          </select>
+        </label>
+        <label class="field">阶段说明
+          <input id="stage-detail" name="stageDetail" placeholder="例如：二面待反馈">
+        </label>
+        <label class="field">个人优先级
+          <select id="priority" name="priority">
+            <option value="high">高</option>
+            <option value="medium">中</option>
+            <option value="low">低</option>
+          </select>
+        </label>
+        <label class="field">Base 城市
+          <input id="city" name="city" required placeholder="例如：深圳">
+        </label>
+        <label class="field">偏好
+          <select id="location-preference" name="locationPreference">
+            <option value="love">很想去</option>
+            <option value="okay">可接受</option>
+            <option value="unsure">不确定</option>
+          </select>
+        </label>
+        <div class="location-managed-fields" hidden aria-hidden="true">
+          <input id="building" name="building">
+          <input id="address" name="address">
+          <select id="accuracy" name="accuracy">
+            <option value="confirmed">已确认到办公地点</option>
+            <option value="approximate">大致区域</option>
+            <option value="unknown" selected>待确认（暂不上图）</option>
+          </select>
+          <input id="lng" name="lng" type="number" min="-180" max="180" step="0.000001">
+          <input id="lat" name="lat" type="number" min="-90" max="90" step="0.000001">
+        </div>
+        <section class="job-schedule-editor span-2" aria-labelledby="job-schedule-heading">
+          <header class="job-schedule-heading">
+            <div>
+              <p class="eyebrow">CONFIRMED SCHEDULE</p>
+              <h3 id="job-schedule-heading">岗位日程</h3>
+              <p>在岗位记录里填写已确认的面试时间、测评 / 笔试截止等客观节点。</p>
+            </div>
+            <button class="button button-quiet" type="button" id="job-schedule-add">＋ 添加日程节点</button>
+          </header>
+
+          <div class="job-schedule-list" id="job-schedule-list" aria-live="polite"></div>
+
+          <div class="job-schedule-compose" id="job-schedule-compose" hidden>
+            <input id="job-schedule-id" type="hidden">
+            <div class="job-schedule-compose-grid">
+              <label class="field">日程类型
+                <select id="job-schedule-type">
+                  <option value="assessment">测评 / 笔试截止</option>
+                  <option value="interview">面试</option>
+                  <option value="application">投递截止</option>
+                  <option value="material">材料提交截止</option>
+                  <option value="offer">Offer 回复截止</option>
+                </select>
+              </label>
+              <label class="field">日期
+                <input id="job-schedule-date" type="date">
+              </label>
+              <label class="field">开始 / 截止时间
+                <input id="job-schedule-start-time" type="time">
+              </label>
+              <label class="field">结束时间
+                <input id="job-schedule-end-time" type="time">
+              </label>
+              <label class="field span-2">轮次 / 日程名称（可选）
+                <input id="job-schedule-title" placeholder="例如：产品二面；在线笔试截止">
+              </label>
+              <label class="field span-2">地点 / 会议链接（可选）
+                <input id="job-schedule-location" placeholder="测评 / 面试链接、办公楼或会议室">
+              </label>
+              <label class="field span-2">客观说明（可选）
+                <textarea id="job-schedule-notes" rows="2" placeholder="例如：会议号、材料格式或截止规则"></textarea>
+              </label>
+            </div>
+            <p class="form-error" id="job-schedule-error" aria-live="polite"></p>
+            <div class="job-schedule-compose-actions">
+              <button class="button button-quiet" type="button" id="job-schedule-cancel">取消</button>
+              <button class="button button-primary" type="button" id="job-schedule-save">保存节点</button>
+            </div>
+          </div>
+        </section>
+        <label class="field span-2">备注
+          <textarea id="notes" name="notes" rows="3" placeholder="通勤、团队、岗位方向等个人判断"></textarea>
+        </label>
+      </div>
+
+      <p class="form-error" id="form-error" aria-live="polite"></p>
+      <footer class="dialog-actions">
+        <span>地址未确认时不会生成虚假的精确 Pin</span>
+        <button class="button button-primary" type="button" id="save-button">保存记录</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="friends-dialog" id="friends-dialog" aria-labelledby="friends-dialog-title">
+    <div class="friends-shell">
+      <header class="friends-dialog-heading">
+        <div>
+          <p class="eyebrow">FRIEND ORBIT</p>
+          <h2 id="friends-dialog-title">朋友的校招</h2>
+          <p>只同步地图点位；公司、岗位、进度和地址文字不会共享。</p>
+        </div>
+        <button class="button button-quiet" type="button" id="friends-close">关闭</button>
+      </header>
+
+      <div class="friends-grid">
+        <section class="friend-share-card" aria-labelledby="my-share-heading">
+          <div class="friend-section-heading">
+            <div>
+              <p class="eyebrow">MY SIGNAL</p>
+              <h3 id="my-share-heading">共享我的点位</h3>
+            </div>
+            <span class="friend-privacy-chip">仅坐标</span>
+          </div>
+          <label class="field">朋友看到的昵称
+            <input id="friend-display-name" maxlength="24" placeholder="例如：小杜">
+          </label>
+          <div class="friend-share-code" id="friend-share-code-wrap" hidden>
+            <span>我的共享码</span>
+            <strong id="friend-share-code">—</strong>
+            <button type="button" id="friend-copy-code">复制</button>
+          </div>
+          <div class="friend-share-actions">
+            <button class="button button-primary friend-primary-action" type="button" id="friend-publish">创建共享码</button>
+            <button class="button button-quiet friend-revoke" type="button" id="friend-revoke" hidden>停止共享</button>
+          </div>
+          <p class="friend-status" id="friend-publish-status" aria-live="polite"></p>
+        </section>
+
+        <section class="friend-follow-card" aria-labelledby="follow-friend-heading">
+          <div class="friend-section-heading">
+            <div>
+              <p class="eyebrow">SHARED SIGNALS</p>
+              <h3 id="follow-friend-heading">添加朋友</h3>
+            </div>
+            <button class="friend-refresh" type="button" id="friend-refresh">刷新</button>
+          </div>
+          <div class="friend-add-grid">
+            <label class="field">朋友共享码
+              <input id="friend-code-input" maxlength="12" autocomplete="off" placeholder="输入 8 位共享码">
+            </label>
+            <label class="field">备注昵称（可选）
+              <input id="friend-alias-input" maxlength="24" placeholder="例如：大学室友">
+            </label>
+            <button class="button button-primary" type="button" id="friend-add">添加并同步</button>
+          </div>
+          <p class="friend-status" id="friend-follow-status" aria-live="polite"></p>
+          <div class="friend-subscriptions" id="friend-subscriptions"></div>
+        </section>
+      </div>
+
+      <footer class="friends-footnote">
+        <span><i aria-hidden="true"></i>每位朋友使用独立颜色，只显示昵称与点位</span>
+        <span>通过本地启动服务即可同步；部署后可跨设备使用</span>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="career-directions-dialog" id="career-directions-dialog" aria-labelledby="career-directions-title">
+    <div class="career-directions-shell">
+      <header class="career-directions-heading">
+        <div>
+          <p class="eyebrow">CAREER COMPASS</p>
+          <h2 id="career-directions-title">计划求职方向</h2>
+          <p>先选出想探索的岗位方向。它们只用于整理你的目标，不会改动投递数据。</p>
+        </div>
+        <button class="career-directions-close" type="button" id="career-directions-close" aria-label="关闭计划求职方向">×</button>
+      </header>
+
+      <div class="career-direction-cloud" id="career-direction-cloud" role="group" aria-label="可选择的岗位方向"></div>
+
+      <div class="career-custom-row">
+        <label for="career-direction-custom">没有合适的？添加自定义方向</label>
+        <div>
+          <input id="career-direction-custom" maxlength="16" autocomplete="off" placeholder="例如：游戏策划">
+          <button type="button" id="career-direction-custom-add">＋ 加入泡泡</button>
+        </div>
+      </div>
+
+      <footer class="career-directions-footer">
+        <p id="career-directions-status" aria-live="polite">最多选择 8 个方向，之后随时可以调整。</p>
+        <div>
+          <button class="career-directions-skip" type="button" id="career-directions-skip">暂不设置</button>
+          <button class="career-directions-save" type="button" id="career-directions-save">保存方向</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="admin-dialog" id="admin-dialog" aria-labelledby="admin-dialog-title">
+    <div class="admin-shell">
+      <header class="admin-dialog-heading">
+        <div>
+          <p class="eyebrow">ACCESS &amp; USAGE</p>
+          <h2 id="admin-dialog-title">访问控制</h2>
+          <p>管理内测邀请码、已注册账号，以及平台内触发的高德功能调用。</p>
+        </div>
+        <div class="admin-heading-actions">
+          <button class="admin-refresh" type="button" id="admin-refresh">刷新数据</button>
+          <button class="button button-quiet" type="button" id="admin-close">关闭</button>
+        </div>
+      </header>
+
+      <div class="admin-summary" id="admin-summary" aria-label="平台摘要">
+        <article><span>REGISTERED</span><strong id="admin-user-count">—</strong><small>已注册账号</small></article>
+        <article><span>ACTIVE CODES</span><strong id="admin-invite-count">—</strong><small>可用邀请码</small></article>
+        <article class="is-accent"><span>TRANSIT · 30D</span><strong id="admin-route-count">—</strong><small>路线规划调用</small></article>
+        <article><span>POI SEARCH · 30D</span><strong id="admin-search-count">—</strong><small>地点搜索调用</small></article>
+      </div>
+
+      <div class="admin-grid">
+        <section class="admin-panel admin-invites" aria-labelledby="admin-invites-title">
+          <div class="admin-panel-heading">
+            <div>
+              <p class="eyebrow">INVITE GATE</p>
+              <h3 id="admin-invites-title">邀请码</h3>
+            </div>
+            <span>仅创建时显示完整码</span>
+          </div>
+
+          <form class="admin-invite-form" id="admin-invite-form">
+            <label>自定义邀请码（可留空随机生成）
+              <input id="admin-invite-code" maxlength="24" autocomplete="off" placeholder="例如：HYPERGRAD-01">
+            </label>
+            <label>用途备注
+              <input id="admin-invite-label" maxlength="60" placeholder="例如：产品同学内测">
+            </label>
+            <label>最多使用次数
+              <input id="admin-invite-max-uses" type="number" min="1" max="10000" placeholder="不限">
+            </label>
+            <label>到期日期
+              <input id="admin-invite-expiry" type="date">
+            </label>
+            <button class="button button-primary" type="submit" id="admin-invite-create">创建邀请码</button>
+          </form>
+
+          <div class="admin-new-code" id="admin-new-code" hidden>
+            <span>新邀请码</span>
+            <strong id="admin-new-code-value">—</strong>
+            <button type="button" id="admin-copy-code">复制</button>
+          </div>
+          <p class="admin-status" id="admin-status" aria-live="polite"></p>
+          <div class="admin-invite-list" id="admin-invite-list"></div>
+        </section>
+
+        <section class="admin-panel admin-usage" aria-labelledby="admin-usage-title">
+          <div class="admin-panel-heading">
+            <div>
+              <p class="eyebrow">AMAP SIGNAL</p>
+              <h3 id="admin-usage-title">高德调用</h3>
+            </div>
+            <a href="https://console.amap.com/dev/key/app" target="_blank" rel="noreferrer">官方控制台 ↗</a>
+          </div>
+          <p class="admin-panel-note">这里统计本平台实际发起的调用；官方配额与计费仍以高德控制台为准。</p>
+          <div class="admin-usage-legend" aria-label="调用类型图例">
+            <span><i class="is-route"></i>路线规划</span>
+            <span><i class="is-search"></i>地点搜索</span>
+            <span><i class="is-error"></i>路线失败</span>
+          </div>
+          <div class="admin-usage-chart" id="admin-usage-chart" aria-label="最近 14 天高德调用趋势"></div>
+          <div class="admin-recent-usage" id="admin-recent-usage"></div>
+        </section>
+
+        <section class="admin-panel admin-users" aria-labelledby="admin-users-title">
+          <div class="admin-panel-heading">
+            <div>
+              <p class="eyebrow">MEMBERS</p>
+              <h3 id="admin-users-title">已注册账号</h3>
+            </div>
+            <span id="admin-users-caption">—</span>
+          </div>
+          <div class="admin-user-list" id="admin-user-list"></div>
+        </section>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>

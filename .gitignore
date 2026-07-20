@@ -1,0 +1,19 @@
+friend-spaces.local.json
+friend-spaces.tmp
+__pycache__/
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+amap-config.local.js
+supabase-config.local.js
+*.local.json
+dist/
+校招投递备份-*.json
+
+# Deployment and database tooling caches.
+.vercel/
+.wrangler/
+supabase/.temp/
+dist/
