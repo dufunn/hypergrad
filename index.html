@@ -10,17 +10,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Pixelify+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="./styles.css?v=26">
-  <link rel="stylesheet" href="./workspace.css?v=44">
+  <link rel="stylesheet" href="./styles.css?v=28">
+  <link rel="stylesheet" href="./workspace.css?v=46">
   <script defer src="./amap-config.local.js"></script>
   <script defer src="./supabase-config.local.js"></script>
   <script defer src="./runtime-config.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
-  <script defer src="./assets/china-boundary-data.js?v=23"></script>
-  <script defer src="./assets/china-provinces-data.js?v=23"></script>
-  <script defer src="./app.js?v=43"></script>
+  <script defer src="./assets/china-boundary-data.js?v=24"></script>
+  <script defer src="./assets/china-provinces-data.js?v=24"></script>
+  <script defer src="./app.js?v=45"></script>
 </head>
 <body>
   <main class="app-shell" id="campus-dashboard">
@@ -271,6 +271,7 @@
             <label class="applications-filter">进度
               <select id="applications-stage-filter">
                 <option value="all">全部进度</option>
+                <option value="screening">待筛选</option>
                 <option value="pending">待投递</option>
                 <option value="applied">已投递</option>
                 <option value="test">测评 / 笔试</option>
@@ -301,6 +302,7 @@
         <div class="field compact-field"><span class="field-label" id="stage-filter-label">进度</span>
           <select id="stage-filter">
             <option value="all">全部进度</option>
+            <option value="screening">待筛选</option>
             <option value="pending">待投递</option>
             <option value="applied">已投递</option>
             <option value="test">测评 / 笔试</option>
@@ -560,7 +562,7 @@
       <header class="dialog-heading">
         <div>
           <h2 id="form-title">新增岗位</h2>
-          <p>一条记录对应“公司 × 岗位 × 具体 Base”</p>
+          <p id="form-subtitle">一条记录对应“公司 × 岗位 × 具体 Base”</p>
         </div>
         <button class="button button-quiet" type="button" id="dialog-close">关闭</button>
       </header>
@@ -630,6 +632,7 @@
         </label>
         <label class="field">当前进度
           <select id="stage" name="stage" required>
+            <option value="screening">待筛选</option>
             <option value="pending">待投递</option>
             <option value="applied">已投递</option>
             <option value="test">测评 / 笔试</option>

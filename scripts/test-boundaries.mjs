@@ -21,4 +21,39 @@ for (const feature of provinces.features) {
   assert.equal(feature.properties?.centroid?.length, 2, `Missing centroid: ${feature.properties?.name}`);
 }
 
+function outerRings(geometry) {
+  if (geometry?.type === "Polygon") return [geometry.coordinates[0]];
+  if (geometry?.type === "MultiPolygon") return geometry.coordinates.map((polygon) => polygon[0]);
+  return [];
+}
+
+function pointKey(point) {
+  return JSON.stringify(point);
+}
+
+function edgeKey(left, right) {
+  const leftKey = pointKey(left);
+  const rightKey = pointKey(right);
+  return leftKey < rightKey ? `${leftKey}|${rightKey}` : `${rightKey}|${leftKey}`;
+}
+
+function edgeCounts(features) {
+  const counts = new Map();
+  features.forEach((feature) => {
+    outerRings(feature.geometry).forEach((ring) => {
+      ring.slice(0, -1).forEach((left, index) => {
+        const key = edgeKey(left, ring[index + 1]);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    });
+  });
+  return counts;
+}
+
+const provinceEdges = edgeCounts(provinces.features);
+const provinceExterior = new Set([...provinceEdges].filter(([, count]) => count === 1).map(([key]) => key));
+const countryEdges = new Set(edgeCounts(boundary.features).keys());
+assert.equal(countryEdges.size, provinceExterior.size, "Country outline must contain every province exterior edge");
+for (const edge of provinceExterior) assert.ok(countryEdges.has(edge), `Country outline diverges at ${edge}`);
+
 console.log("boundary data tests passed");

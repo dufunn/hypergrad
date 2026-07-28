@@ -2147,7 +2147,11 @@
   font-weight: 700;
 }
 
-.applications-filter select {
+.applications-filter .system-select {
+  min-width: 0;
+}
+
+.applications-filter .system-select-trigger {
   min-height: 42px;
   padding: 0 36px 0 12px;
   border: 1px solid var(--hg-line);
@@ -2155,6 +2159,38 @@
   background: var(--hg-card);
   color: var(--hg-ink);
   font-weight: 600;
+}
+
+.applications-filter .system-select-caret {
+  position: absolute;
+  right: 8px;
+  background: rgba(108, 168, 150, 0.15);
+  color: var(--hg-teal);
+}
+
+.applications-filter .system-select-trigger:hover,
+.applications-filter .system-select.is-open .system-select-trigger {
+  border-color: rgba(47, 116, 101, 0.3);
+  background: rgba(240, 244, 238, 0.98);
+  box-shadow: 0 0 0 3px rgba(108, 168, 150, 0.1);
+}
+
+.applications-filter .system-select-menu {
+  border-color: rgba(27, 50, 46, 0.14);
+  background: rgba(251, 250, 246, 0.98);
+  color: var(--hg-ink);
+  box-shadow: 0 18px 42px rgba(34, 50, 46, 0.18), inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.applications-filter .system-select-option {
+  color: var(--hg-copy);
+}
+
+.applications-filter .system-select-option:hover,
+.applications-filter .system-select-option:focus-visible,
+.applications-filter .system-select-option[aria-selected="true"] {
+  background: rgba(204, 225, 216, 0.42);
+  color: var(--hg-deep);
 }
 
 .applications-scope {
@@ -2207,7 +2243,7 @@
 .applications-card-heading,
 .application-row {
   display: grid;
-  grid-template-columns: minmax(250px, 1.5fr) minmax(120px, 0.65fr) minmax(170px, 0.9fr) minmax(170px, 0.9fr) 174px;
+  grid-template-columns: minmax(230px, 1.45fr) minmax(132px, 0.68fr) minmax(150px, 0.82fr) minmax(160px, 0.9fr) 238px;
   align-items: center;
   gap: 14px;
 }
@@ -2268,6 +2304,33 @@
   font-size: 13px;
 }
 
+.application-company-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 5px;
+  color: var(--hg-deep);
+  text-decoration: none;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.application-company-link svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.application-company-link:hover,
+.application-company-link:focus-visible {
+  outline: 0;
+  background: rgba(228, 209, 175, 0.34);
+  color: #765729;
+}
+
 .application-main span,
 .application-base span,
 .application-schedule span {
@@ -2282,23 +2345,112 @@
   font-size: 13px;
 }
 
-.application-status {
-  width: max-content;
-  padding: 7px 9px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: 999px;
-  background: rgba(227, 231, 226, 0.72);
+.application-stage-control {
+  min-width: 0;
+  --application-stage-color: #82919d;
+}
+
+.application-stage-control[data-stage="applied"] { --application-stage-color: #4db7ef; }
+.application-stage-control[data-stage="test"] { --application-stage-color: #9a74ee; }
+.application-stage-control[data-stage="interview"] { --application-stage-color: #ffb444; }
+.application-stage-control[data-stage="offer"] { --application-stage-color: #42d7ac; }
+.application-stage-control[data-stage="ended"] { --application-stage-color: #697886; }
+
+.application-stage-control .system-select-trigger {
+  min-height: 44px;
+  padding: 6px 7px 6px 14px;
+  border-color: color-mix(in srgb, var(--application-stage-color) 28%, var(--hg-line));
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--application-stage-color) 13%, transparent), transparent 74%),
+    rgba(255, 255, 252, 0.74);
+  color: var(--hg-deep);
   font-size: 12px;
   font-weight: 700;
+}
+
+.application-stage-control .system-select-trigger::before {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--application-stage-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--application-stage-color) 14%, transparent);
+  content: "";
+}
+
+.application-stage-control .system-select-value {
+  margin-right: auto;
+}
+
+.application-stage-control .system-select-caret {
+  background: color-mix(in srgb, var(--application-stage-color) 12%, transparent);
+  color: var(--hg-teal);
+}
+
+.application-stage-control .system-select-trigger:hover,
+.application-stage-control .system-select-trigger:focus-visible,
+.application-stage-control .system-select.is-open .system-select-trigger {
+  border-color: color-mix(in srgb, var(--application-stage-color) 58%, var(--hg-line));
+  background: color-mix(in srgb, var(--application-stage-color) 13%, #fffdf8);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--application-stage-color) 12%, transparent);
+}
+
+.application-stage-control .system-select-menu {
+  min-width: 172px;
+  border-color: rgba(27, 50, 46, 0.14);
+  background: rgba(251, 250, 246, 0.98);
+  color: var(--hg-ink);
+  box-shadow: 0 18px 42px rgba(34, 50, 46, 0.18), inset 0 1px rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px) saturate(92%);
+}
+
+.application-stage-control .system-select-option {
+  min-height: 42px;
+  color: var(--hg-copy);
+}
+
+.application-stage-control .system-select-option:hover,
+.application-stage-control .system-select-option:focus-visible,
+.application-stage-control .system-select-option[aria-selected="true"] {
+  background: rgba(204, 225, 216, 0.42);
+  color: var(--hg-deep);
+}
+
+.application-stage-control .system-select-option[aria-selected="true"] .system-select-option-indicator {
+  border-color: var(--application-stage-color);
+  background: var(--application-stage-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--application-stage-color) 14%, transparent);
+}
+
+.application-schedule {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--hg-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.application-schedule:hover,
+.application-schedule:focus-visible {
+  outline: 0;
+  border-color: rgba(199, 163, 109, 0.32);
+  background: rgba(228, 209, 175, 0.22);
+  box-shadow: inset 3px 0 rgba(199, 163, 109, 0.66);
 }
 
 .application-actions {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .application-action {
@@ -2335,6 +2487,12 @@
   color: #765729;
 }
 
+.application-delete {
+  border-color: rgba(168, 79, 93, 0.2);
+  background: rgba(168, 79, 93, 0.06);
+  color: #914653;
+}
+
 .application-action:hover,
 .application-action:focus-visible {
   border-color: rgba(31, 113, 105, 0.34);
@@ -2348,6 +2506,13 @@
   border-color: rgba(183, 132, 55, 0.5);
   background: rgba(229, 194, 143, 0.42);
   color: #5f431c;
+}
+
+.application-delete:hover,
+.application-delete:focus-visible {
+  border-color: rgba(168, 79, 93, 0.42);
+  background: rgba(168, 79, 93, 0.13);
+  color: #7f3542;
 }
 
 .application-action:active {
@@ -2374,6 +2539,7 @@
   --primary-hover: #173f37;
   --primary-text: #fffaf0;
   --accent-soft: rgba(108, 168, 150, 0.16);
+  --screening: #9fb6b0;
   --pending: #7c8999;
   --applied: #48b8ff;
   --test: #aa7dff;
@@ -3097,6 +3263,51 @@
   background: rgba(255, 255, 252, 0.72);
   color: var(--hg-ink);
   font-size: 13px;
+}
+
+.calendar-dialog .system-select-trigger {
+  min-height: 44px;
+  border-color: rgba(27, 50, 46, 0.13);
+  background: rgba(255, 255, 252, 0.76);
+  color: var(--hg-ink);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.84);
+}
+
+.calendar-dialog .system-select-trigger:hover,
+.calendar-dialog .system-select.is-open .system-select-trigger {
+  border-color: rgba(47, 116, 101, 0.34);
+  background: rgba(240, 244, 238, 0.98);
+  box-shadow: 0 0 0 3px rgba(108, 168, 150, 0.12);
+}
+
+.calendar-dialog .system-select-caret {
+  background: rgba(108, 168, 150, 0.16);
+  color: var(--hg-teal);
+}
+
+.calendar-dialog .system-select-menu {
+  border-color: rgba(27, 50, 46, 0.14);
+  background:
+    linear-gradient(135deg, rgba(148, 184, 171, 0.12), transparent 42%),
+    rgba(251, 250, 246, 0.98);
+  box-shadow: 0 18px 45px rgba(18, 42, 36, 0.18), inset 0 1px rgba(255, 255, 255, 0.92);
+}
+
+.calendar-dialog .system-select-option {
+  color: var(--hg-copy);
+}
+
+.calendar-dialog .system-select-option:hover,
+.calendar-dialog .system-select-option:focus-visible,
+.calendar-dialog .system-select-option[aria-selected="true"] {
+  background: linear-gradient(90deg, rgba(228, 209, 175, 0.42), rgba(204, 225, 216, 0.22));
+  color: var(--hg-deep);
+}
+
+.calendar-dialog .system-select-option[aria-selected="true"] .system-select-option-indicator {
+  border-color: var(--hg-teal);
+  background: var(--hg-teal);
+  box-shadow: 0 0 0 3px rgba(108, 168, 150, 0.18);
 }
 
 /* Career direction onboarding */
@@ -4461,6 +4672,42 @@
   padding-top: 4px;
 }
 
+.job-dialog.is-schedule-only {
+  width: min(820px, calc(100% - 24px));
+}
+
+.job-dialog.is-schedule-only #job-form {
+  gap: 16px;
+}
+
+.job-dialog.is-schedule-only .job-import-card,
+.job-dialog.is-schedule-only .location-picker,
+.job-dialog.is-schedule-only .form-grid > .field,
+.job-dialog.is-schedule-only .form-grid > .location-managed-fields {
+  display: none;
+}
+
+.job-dialog.is-schedule-only .form-grid {
+  display: block;
+}
+
+.job-dialog.is-schedule-only .job-schedule-editor {
+  min-height: 320px;
+  padding: 20px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(199, 163, 109, 0.16), transparent 42%),
+    rgba(235, 239, 232, 0.9);
+}
+
+.job-dialog.is-schedule-only .dialog-actions {
+  justify-content: flex-end;
+}
+
+.job-dialog.is-schedule-only .dialog-actions > span {
+  display: none;
+}
+
 .friends-dialog {
   width: min(960px, calc(100% - 24px));
   border-radius: 34px;
@@ -4689,9 +4936,13 @@
     row-gap: 10px;
   }
 
-  .application-base,
-  .application-schedule {
+  .application-base {
     display: none;
+  }
+
+  .application-schedule {
+    grid-column: 1 / -1;
+    display: block;
   }
 
   .application-actions {
@@ -4699,6 +4950,10 @@
     width: 100%;
     padding-top: 10px;
     border-top: 1px solid rgba(50, 91, 84, 0.12);
+  }
+
+  .application-stage-control {
+    width: 148px;
   }
 
   .research-view .mission-right .insights {
