@@ -18,6 +18,7 @@
   --primary-text: #031018;
   --accent-soft: rgba(77, 210, 255, 0.13);
   --danger: #ff6685;
+  --screening: #9fb6b0;
   --pending: #7c8999;
   --applied: #48b8ff;
   --test: #aa7dff;
@@ -883,6 +884,10 @@ strong {
   min-width: 160px;
   display: grid;
   gap: 3px;
+  max-height: min(320px, calc(100dvh - 32px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border: 1px solid rgba(155, 230, 247, 0.24);
   border-radius: 16px;
@@ -893,6 +898,8 @@ strong {
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px rgba(241, 253, 255, 0.055);
   transform-origin: top center;
   animation: system-select-enter 170ms ease-out;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 28%, transparent) transparent;
 }
 
 .system-select-menu[hidden] {
@@ -1350,7 +1357,7 @@ textarea::placeholder {
 
 .stage-flow-labels {
   display: grid;
-  grid-template-columns: repeat(6, minmax(48px, 1fr));
+  grid-template-columns: repeat(7, minmax(42px, 1fr));
   gap: 8px;
   margin-top: 17px;
 }
@@ -1659,6 +1666,7 @@ textarea::placeholder {
   border-color: rgba(214, 245, 251, 0.16);
 }
 
+.record-card[data-stage="screening"] { --record-accent: var(--screening); }
 .record-card[data-stage="pending"] { --record-accent: var(--pending); }
 .record-card[data-stage="applied"] { --record-accent: var(--applied); }
 .record-card[data-stage="test"] { --record-accent: var(--test); }
@@ -1713,6 +1721,7 @@ textarea::placeholder {
   flex: 0 0 auto;
 }
 
+.stage-screening { background: var(--screening); }
 .stage-pending { background: var(--pending); }
 .stage-applied { background: var(--applied); }
 .stage-test { background: var(--test); }
@@ -1928,6 +1937,7 @@ textarea::placeholder {
   gap: 14px;
 }
 
+.selection-card[data-stage="screening"] { --selection-accent: var(--screening); }
 .selection-card[data-stage="pending"] { --selection-accent: var(--pending); }
 .selection-card[data-stage="applied"] { --selection-accent: var(--applied); }
 .selection-card[data-stage="test"] { --selection-accent: var(--test); }
@@ -2124,6 +2134,7 @@ textarea::placeholder {
   border: 0;
 }
 
+.job-marker.marker-screening { --marker-color: var(--screening); }
 .job-marker.marker-pending { --marker-color: var(--pending); }
 .job-marker.marker-applied { --marker-color: var(--applied); }
 .job-marker.marker-test { --marker-color: var(--test); }

@@ -76,6 +76,83 @@ function geometryCentroid(geometry) {
   return ring ? ringCentroid(ring).map((value) => Number(value.toFixed(6))) : null;
 }
 
+function coordinateKey(point) {
+  return JSON.stringify(point);
+}
+
+function edgeKey(left, right) {
+  const leftKey = coordinateKey(left);
+  const rightKey = coordinateKey(right);
+  return leftKey < rightKey ? `${leftKey}|${rightKey}` : `${rightKey}|${leftKey}`;
+}
+
+function deriveCountryGeometry(features) {
+  const edges = new Map();
+  const points = new Map();
+
+  features.forEach((feature) => {
+    outerRings(feature.geometry).forEach((sourceRing) => {
+      if (sourceRing.length < 3) return;
+      const ring = coordinateKey(sourceRing[0]) === coordinateKey(sourceRing[sourceRing.length - 1])
+        ? sourceRing
+        : [...sourceRing, sourceRing[0]];
+      ring.slice(0, -1).forEach((left, index) => {
+        const right = ring[index + 1];
+        const key = edgeKey(left, right);
+        const existing = edges.get(key);
+        if (existing) existing.count += 1;
+        else edges.set(key, { left, right, count: 1 });
+        points.set(coordinateKey(left), left);
+        points.set(coordinateKey(right), right);
+      });
+    });
+  });
+
+  const adjacency = new Map();
+  const connect = (left, right) => {
+    const neighbors = adjacency.get(left) || [];
+    neighbors.push(right);
+    adjacency.set(left, neighbors);
+  };
+  edges.forEach(({ left, right, count }) => {
+    if (count !== 1) return;
+    const leftKey = coordinateKey(left);
+    const rightKey = coordinateKey(right);
+    connect(leftKey, rightKey);
+    connect(rightKey, leftKey);
+  });
+
+  adjacency.forEach((neighbors, point) => {
+    if (neighbors.length !== 2) throw new Error(`Province exterior is not a closed topology at ${point}`);
+  });
+
+  const visited = new Set();
+  const rings = [];
+  adjacency.forEach((_, start) => {
+    if (visited.has(start)) return;
+    const ring = [];
+    let previous = null;
+    let current = start;
+    do {
+      visited.add(current);
+      ring.push(points.get(current));
+      const neighbors = adjacency.get(current);
+      const next = neighbors[0] === previous ? neighbors[1] : neighbors[0];
+      previous = current;
+      current = next;
+      if (ring.length > adjacency.size + 1) throw new Error("Province exterior traversal did not close");
+    } while (current !== start);
+    ring.push(points.get(start));
+    if (ringArea(ring) < 0) ring.reverse();
+    rings.push(ring);
+  });
+
+  rings.sort((left, right) => Math.abs(ringArea(right)) - Math.abs(ringArea(left)));
+  return rings.length === 1
+    ? { type: "Polygon", coordinates: [rings[0]] }
+    : { type: "MultiPolygon", coordinates: rings.map((ring) => [ring]) };
+}
+
 function normalizeFeature(feature, name, level) {
   const centroid = geometryCentroid(feature.geometry);
   return {
@@ -93,18 +170,22 @@ function normalizeFeature(feature, name, level) {
 
 const adm0 = JSON.parse(await readFile(adm0Path, "utf8"));
 const adm1 = JSON.parse(await readFile(adm1Path, "utf8"));
-const boundary = {
-  type: "FeatureCollection",
-  features: adm0.features.map((feature) => normalizeFeature(feature, "中华人民共和国", "country"))
-};
+if (!adm0.features?.length || !adm1.features?.length) {
+  throw new Error("Boundary sources must contain country and province features");
+}
 const provinces = {
   type: "FeatureCollection",
   features: adm1.features.map((feature) => {
-    const sourceName = feature.properties?.shapeName;
-    const name = provinceNames.get(sourceName);
+    const sourceName = feature.properties?.shapeName || feature.properties?.name;
+    const name = provinceNames.get(sourceName) || sourceName;
     if (!name) throw new Error(`Missing Chinese province name for: ${sourceName}`);
     return normalizeFeature(feature, name, "province");
   })
+};
+const countryGeometry = deriveCountryGeometry(provinces.features);
+const boundary = {
+  type: "FeatureCollection",
+  features: [normalizeFeature({ geometry: countryGeometry }, "中华人民共和国", "country")]
 };
 
 const boundaryJson = JSON.stringify(boundary);

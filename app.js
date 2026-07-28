@@ -167,6 +167,7 @@
   };
 
   const statusMeta = {
+    screening: { label: "待筛选" },
     pending: { label: "待投递" },
     applied: { label: "已投递" },
     test: { label: "测评 / 笔试" },
@@ -656,6 +657,7 @@
     dialog: byId("job-dialog"),
     form: byId("job-form"),
     formTitle: byId("form-title"),
+    formSubtitle: byId("form-subtitle"),
     dialogClose: byId("dialog-close"),
     saveButton: byId("save-button"),
     formError: byId("form-error"),
@@ -727,6 +729,7 @@
   let selectedId = records[0]?.id || null;
   let selectionCardHidden = true;
   let editingId = null;
+  let jobDialogMode = "full";
   let draftJobSnapshot = null;
   let draftJobImportResult = null;
   let draftDuplicateRecords = [];
@@ -1847,7 +1850,7 @@
   }
 
   function recordReachedApplied(record) {
-    return record.stage !== "pending"
+    return ["applied", "test", "interview", "offer", "ended"].includes(record.stage)
       || (record.timeline || []).some((item) => /已投递|投递成功|完成投递|提交投递/.test(item.label || ""));
   }
 
@@ -1947,7 +1950,7 @@
   function renderOverviewPipeline() {
     if (!els.overviewPipeline) return;
     const stageSpecs = [
-      { key: "pool", label: "岗位池", scopeLabel: "岗位池（未结束）", stages: ["pending", "applied", "test", "interview", "offer"], colors: ["#395d61", "#4f9da2"] },
+      { key: "pool", label: "岗位池", scopeLabel: "岗位池（未结束）", stages: ["screening", "pending", "applied", "test", "interview", "offer"], colors: ["#395d61", "#4f9da2"] },
       { key: "submitted", label: "已投递", scopeLabel: "已投递及以后", stages: ["applied", "test", "interview", "offer"], colors: ["#4f9da2", "#8e7eb0"] },
       { key: "assessment", label: "测评", scopeLabel: "测评 / 笔试及以后", stages: ["test", "interview", "offer"], colors: ["#8e7eb0", "#d29a61"] },
       { key: "interview", label: "面试", scopeLabel: "面试及以后", stages: ["interview", "offer"], colors: ["#d29a61", "#62b496"] },
@@ -2211,6 +2214,7 @@
 
   function renderApplications() {
     if (!els.applicationsList) return;
+    els.applicationsList.querySelectorAll("select").forEach((select) => systemSelectRegistry.delete(select));
     const query = String(els.applicationsQuery?.value || "").trim().toLocaleLowerCase("zh-CN");
     const stage = els.applicationsStageFilter?.value || "all";
     const funnelStageSet = stage === "all" && applicationsFunnelStages?.length
@@ -2239,21 +2243,33 @@
     }
     els.applicationsList.innerHTML = visible.map((record) => {
       const schedule = nextIncompleteEvent(record);
+      const jobUrl = externalMeetingUrl(record.jdUrl || record.jdSnapshot?.sourceUrl);
+      const companyMarkup = jobUrl
+        ? `<a class="application-company-link" href="${escapeHtml(jobUrl)}" target="_blank" rel="noopener noreferrer" title="打开岗位详情：${escapeHtml(record.company)} · ${escapeHtml(record.role)}">${escapeHtml(record.company)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5"/><path d="m19 5-8 8"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>`
+        : escapeHtml(record.company);
+      const stageOptions = Object.entries(statusMeta).map(([value, meta]) =>
+        `<option value="${escapeHtml(value)}"${record.stage === value ? " selected" : ""}>${escapeHtml(meta.label)}</option>`
+      ).join("");
       return `
         <article class="application-row">
           <div class="application-main">
-            <strong>${escapeHtml(record.company)} · ${escapeHtml(record.role)}</strong>
+            <strong>${companyMarkup} · ${escapeHtml(record.role)}</strong>
             <span>${escapeHtml(record.stageDetail || "尚未填写阶段说明")}</span>
           </div>
-          <span class="application-status"><i class="status-dot stage-${escapeHtml(record.stage)}"></i>${escapeHtml(statusMeta[record.stage]?.label || record.stage)}</span>
+          <label class="application-stage-control" data-stage="${escapeHtml(record.stage)}">
+            <span class="visually-hidden">更新${escapeHtml(record.company)} · ${escapeHtml(record.role)}的进度</span>
+            <select id="application-stage-${escapeHtml(record.id)}" data-application-stage="${escapeHtml(record.id)}" aria-label="更新${escapeHtml(record.company)} · ${escapeHtml(record.role)}的进度">
+              ${stageOptions}
+            </select>
+          </label>
           <div class="application-base">
             <strong>${escapeHtml(record.city || "城市待确认")}</strong>
             <span>${escapeHtml(record.building || "办公地点待确认")}</span>
           </div>
-          <div class="application-schedule">
+          <button class="application-schedule" type="button" data-application-schedule="${escapeHtml(record.id)}" aria-label="仅编辑${escapeHtml(record.company)} · ${escapeHtml(record.role)}的日程">
             <strong>${schedule ? escapeHtml(formatDate(schedule.date)) : "暂无日程"}</strong>
-            <span>${schedule ? escapeHtml(schedule.title) : "可在岗位记录中添加"}</span>
-          </div>
+            <span>${schedule ? escapeHtml(schedule.title) : "点击添加客观节点"}</span>
+          </button>
           <div class="application-actions" role="group" aria-label="${escapeHtml(record.company)} · ${escapeHtml(record.role)}的操作">
             <button class="application-action application-edit" type="button" data-application-edit="${escapeHtml(record.id)}" aria-label="编辑岗位：${escapeHtml(record.company)} · ${escapeHtml(record.role)}">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.7-10.7a2.1 2.1 0 0 0-4-3L4 17v3Z"/><path d="m13.5 7.5 3 3"/></svg>
@@ -2263,9 +2279,46 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5"/><path d="m19 5-8 8"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>
               <span>地图</span>
             </button>
+            <button class="application-action application-delete" type="button" data-application-delete="${escapeHtml(record.id)}" aria-label="删除岗位：${escapeHtml(record.company)} · ${escapeHtml(record.role)}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></svg>
+              <span>删除</span>
+            </button>
           </div>
         </article>`;
     }).join("");
+    els.applicationsList.querySelectorAll("[data-application-stage]").forEach(initializeSystemSelect);
+  }
+
+  function updateApplicationStage(recordId, nextStage) {
+    const record = records.find((item) => item.id === recordId);
+    if (!record || record.stage === nextStage || !statusMeta[nextStage]) return;
+    const restoreScroll = els.applicationsList.scrollTop;
+    const statusLabel = statusMeta[nextStage].label;
+    const updated = normalizeRecord({
+      ...record,
+      stage: nextStage,
+      updatedAt: today(),
+      timeline: [{ date: today(), label: `更新为${statusLabel}` }, ...(record.timeline || [])]
+    });
+    records = records.map((item) => item.id === recordId ? updated : item);
+    saveRecords();
+    render();
+    requestAnimationFrame(() => {
+      els.applicationsList.scrollTop = restoreScroll;
+    });
+  }
+
+  function deleteApplicationRecord(recordId) {
+    const record = records.find((item) => item.id === recordId);
+    if (!record || !window.confirm(`删除“${record.company} · ${record.role}”？此操作无法撤销。`)) return;
+    const restoreScroll = els.applicationsList.scrollTop;
+    records = records.filter((item) => item.id !== recordId);
+    if (selectedId === recordId) selectedId = records[0]?.id || null;
+    saveRecords();
+    render();
+    requestAnimationFrame(() => {
+      els.applicationsList.scrollTop = restoreScroll;
+    });
   }
 
   function overviewProvinceName(record, provinceNames) {
@@ -3160,6 +3213,13 @@
     ui.shell.classList.remove("is-open");
     ui.trigger.setAttribute("aria-expanded", "false");
     ui.menu.hidden = true;
+    if (select.matches("[data-application-stage]")) {
+      ui.menu.style.removeProperty("position");
+      ui.menu.style.removeProperty("top");
+      ui.menu.style.removeProperty("left");
+      ui.menu.style.removeProperty("width");
+      ui.menu.style.removeProperty("z-index");
+    }
     if (restoreFocus) ui.trigger.focus({ preventScroll: true });
   }
 
@@ -3194,6 +3254,23 @@
     ui.shell.classList.add("is-open");
     ui.trigger.setAttribute("aria-expanded", "true");
     ui.menu.hidden = false;
+    if (select.matches("[data-application-stage]")) {
+      const triggerRect = ui.trigger.getBoundingClientRect();
+      const menuWidth = Math.max(172, triggerRect.width);
+      const estimatedHeight = Math.min(292, select.options.length * 45 + 12);
+      const openAbove = window.innerHeight - triggerRect.bottom < estimatedHeight + 16 && triggerRect.top > estimatedHeight + 16;
+      const left = Math.min(Math.max(8, triggerRect.left), window.innerWidth - menuWidth - 8);
+      const top = openAbove
+        ? Math.max(8, triggerRect.top - estimatedHeight - 7)
+        : Math.min(window.innerHeight - estimatedHeight - 8, triggerRect.bottom + 7);
+      Object.assign(ui.menu.style, {
+        position: "fixed",
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${menuWidth}px`,
+        zIndex: "1200"
+      });
+    }
     if (focusSelected) {
       const selectedOption = ui.menu.querySelector('[aria-selected="true"]');
       (selectedOption || systemSelectOptions(select)[0])?.focus({ preventScroll: true });
@@ -3280,7 +3357,8 @@
     systemSelectRegistry.set(select, { shell, trigger, value, menu });
     syncSystemSelect(select, true);
 
-    trigger.addEventListener("click", () => {
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
       if (shell.classList.contains("is-open")) closeSystemSelect(select);
       else openSystemSelect(select);
     });
@@ -3293,7 +3371,10 @@
     });
     menu.addEventListener("click", (event) => {
       const option = event.target.closest("[data-system-select-value]");
-      if (option) chooseSystemSelectValue(select, option.dataset.systemSelectValue);
+      if (option) {
+        event.preventDefault();
+        chooseSystemSelectValue(select, option.dataset.systemSelectValue);
+      }
     });
     menu.addEventListener("keydown", (event) => {
       if (event.key === "ArrowDown") {
@@ -3320,18 +3401,8 @@
     });
   }
 
-  function initializeToolbarSelects() {
-    [
-      els.stageFilter,
-      els.cityFilter,
-      els.locationFilter,
-      els.friendFilter,
-      els.roleDirection,
-      els.stage,
-      els.priority,
-      els.locationPreference,
-      els.jobScheduleType
-    ].forEach(initializeSystemSelect);
+  function initializeSystemSelects() {
+    document.querySelectorAll("select").forEach(initializeSystemSelect);
     document.addEventListener("pointerdown", (event) => {
       if (!event.target.closest(".system-select")) closeOtherSystemSelects();
     });
@@ -3579,6 +3650,7 @@
       .join("");
     els.eventJob.innerHTML = options;
     if (records.some((record) => record.id === selectedJobId)) els.eventJob.value = selectedJobId;
+    syncSystemSelect(els.eventJob, true);
   }
 
   function openEventForm(jobId, eventId) {
@@ -3591,6 +3663,7 @@
     populateEventJobOptions(record.id);
     els.eventId.value = event.id;
     els.eventType.value = event.type;
+    syncSystemSelect(els.eventType);
     els.eventDate.value = event.date;
     els.eventStartTime.value = event.startTime;
     els.eventEndTime.value = event.endTime;
@@ -3598,7 +3671,7 @@
     els.eventLocation.value = event.location;
     els.eventNotes.value = event.notes;
     els.eventForm.hidden = false;
-    els.eventJob.focus({ preventScroll: true });
+    systemSelectRegistry.get(els.eventJob)?.trigger.focus({ preventScroll: true });
   }
 
   function closeEventForm() {
@@ -5609,6 +5682,10 @@
       els.roleDirection.value = direction.value;
       syncSystemSelect(els.roleDirection, true);
     }
+    if (!editingId) {
+      els.stage.value = "screening";
+      syncSystemSelect(els.stage, true);
+    }
     if (result?.sourceUrl) els.jdUrl.value = result.sourceUrl;
 
     const normalizedFields = { company, role, city, deadline, officeQuery, direction };
@@ -5721,16 +5798,22 @@
       : "请先在概览页设置“计划方向”；当前岗位会归入“未分类”";
   }
 
-  function openDialog(recordId = null) {
+  function openDialog(recordId = null, { scheduleOnly = false } = {}) {
     editingId = recordId;
     const record = records.find((item) => item.id === recordId) || null;
+    if (scheduleOnly && !record) return;
+    jobDialogMode = scheduleOnly ? "schedule" : "full";
+    els.dialog.classList.toggle("is-schedule-only", scheduleOnly);
     els.form.reset();
     els.formError.textContent = "";
     els.placeSearchStatus.textContent = "";
     els.jdSourceText.value = "";
     els.jobImportPaste.open = false;
-    els.formTitle.textContent = record ? "更新岗位与位置" : "新增岗位";
-    els.saveButton.textContent = record ? "保存修改" : "保存记录";
+    els.formTitle.textContent = scheduleOnly ? "编辑岗位日程" : record ? "更新岗位与位置" : "新增岗位";
+    els.formSubtitle.textContent = scheduleOnly
+      ? `${record.company} · ${record.role}；这里只保存客观日程节点`
+      : "一条记录对应“公司 × 岗位 × 具体 Base”";
+    els.saveButton.textContent = scheduleOnly ? "保存日程" : record ? "保存修改" : "保存记录";
     renderJobRoleDirectionOptions(record);
     populateForm(record);
     draftJobSnapshot = normalizeJdSnapshot(record?.jdSnapshot);
@@ -5764,20 +5847,24 @@
     if (typeof els.dialog.showModal === "function") els.dialog.showModal();
     else els.dialog.setAttribute("open", "");
 
-    requestAnimationFrame(async () => {
-      await ensurePickerMap();
-      requestAnimationFrame(() => {
-        resizePickerMap();
-        const lng = parseCoordinate(els.lng.value, -180, 180);
-        const lat = parseCoordinate(els.lat.value, -90, 90);
-        if (lng !== null && lat !== null) {
-          setPickerPoint(lng, lat, { fly: true, source: "existing", coordinateSystem: "WGS84" });
-        } else {
-          clearPickerMarker();
-        }
+    if (scheduleOnly) {
+      requestAnimationFrame(() => els.jobScheduleAdd.focus({ preventScroll: true }));
+    } else {
+      requestAnimationFrame(async () => {
+        await ensurePickerMap();
+        requestAnimationFrame(() => {
+          resizePickerMap();
+          const lng = parseCoordinate(els.lng.value, -180, 180);
+          const lat = parseCoordinate(els.lat.value, -90, 90);
+          if (lng !== null && lat !== null) {
+            setPickerPoint(lng, lat, { fly: true, source: "existing", coordinateSystem: "WGS84" });
+          } else {
+            clearPickerMarker();
+          }
+        });
       });
-    });
-    els.company.focus();
+      els.company.focus();
+    }
   }
 
   function closeDialog() {
@@ -5793,6 +5880,29 @@
     if (!els.jobScheduleCompose.hidden) {
       els.formError.textContent = "请先保存或取消正在编辑的日程节点。";
       els.jobScheduleDate.focus();
+      return;
+    }
+    if (jobDialogMode === "schedule") {
+      const old = records.find((item) => item.id === editingId);
+      if (!old) {
+        els.formError.textContent = "没有找到这条岗位记录，请关闭后重试。";
+        return;
+      }
+      const restoreScroll = applicationsScrollBeforeEdit;
+      const updated = normalizeRecord({
+        ...old,
+        events: draftJobEvents.map((event) => normalizeEvent({ ...event })),
+        updatedAt: today()
+      });
+      records = records.map((item) => item.id === old.id ? updated : item);
+      selectedId = updated.id;
+      saveRecords();
+      closeDialog();
+      render();
+      requestAnimationFrame(() => {
+        els.applicationsList.scrollTop = restoreScroll;
+        applicationsScrollBeforeEdit = null;
+      });
       return;
     }
     if (!els.form.checkValidity()) {
@@ -6098,6 +6208,7 @@
     setAppView("applications");
   });
   els.applicationsQuery.addEventListener("input", renderApplications);
+  els.applicationsList.addEventListener("scroll", () => closeOtherSystemSelects(), { passive: true });
   els.applicationsStageFilter.addEventListener("change", () => {
     applicationsFunnelStages = null;
     applicationsFunnelLabel = "";
@@ -6112,7 +6223,22 @@
     applicationsRoleLabel = "";
     renderApplications();
   });
+  els.applicationsList.addEventListener("change", (event) => {
+    const stageSelect = event.target.closest("[data-application-stage]");
+    if (stageSelect) updateApplicationStage(stageSelect.dataset.applicationStage, stageSelect.value);
+  });
   els.applicationsList.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-application-delete]");
+    if (deleteButton) {
+      deleteApplicationRecord(deleteButton.dataset.applicationDelete);
+      return;
+    }
+    const scheduleButton = event.target.closest("[data-application-schedule]");
+    if (scheduleButton) {
+      applicationsScrollBeforeEdit = els.applicationsList.scrollTop;
+      openDialog(scheduleButton.dataset.applicationSchedule, { scheduleOnly: true });
+      return;
+    }
     const editButton = event.target.closest("[data-application-edit]");
     if (editButton) {
       applicationsScrollBeforeEdit = els.applicationsList.scrollTop;
@@ -6451,7 +6577,7 @@
 
   els.placeProviderChip.textContent = amapConfigured() ? "高德 POI" : "开放地图";
   initializeEntryVideo();
-  initializeToolbarSelects();
+  initializeSystemSelects();
   initializeResponsiveLayout();
   rebuildFriendPointsFromCache();
   render();

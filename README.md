@@ -25,6 +25,7 @@ HyperGrad is designed around that decision loop:
 ## Product highlights
 
 - **Application workspace** — track stages, role directions, preferences, priorities, JD snapshots, and objective schedule nodes.
+- **Agent capture queue** — newly captured roles enter a dedicated screening stage before they join the manual application pipeline.
 - **JD Capture** — extract company, role, Base, direction, and deadline from supported public recruitment pages; every result is reviewed before saving.
 - **Schedule** — combine assessments, interviews, material deadlines, meeting links, and Offer response dates.
 - **Role signals** — compare direction distribution, interview conversion, and response-time signals.
